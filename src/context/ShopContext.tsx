@@ -1,5 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import expandedProducts from './expandedProducts'; // Import the expanded product list
 
 // Define types
 export type Platform = 'blinkit' | 'zepto' | 'swiggy' | 'bigbasket' | 'dunzo';
@@ -47,6 +47,7 @@ interface ShopContextType {
   setSearchQuery: (query: string) => void;
   setSelectedPlatform: (platform: Platform | null) => void;
   setSelectedCategory: (category: string) => void;
+  setFilteredProducts: (products: Product[]) => void;
   addToCart: (product: Product, platform?: Platform) => void;
   removeFromCart: (productId: string, platform?: Platform) => void;
   updateCartItemQuantity: (productId: string, quantity: number, platform?: Platform) => void;
@@ -55,9 +56,6 @@ interface ShopContextType {
   getBestPlatformForCart: () => { platform: Platform; total: number } | null;
   clearCart: () => void;
 }
-
-// Create the context
-const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
 // Platform data
 const platformsData: PlatformInfo[] = [
@@ -68,132 +66,14 @@ const platformsData: PlatformInfo[] = [
   { id: 'dunzo', name: 'Dunzo Daily', color: '#00d290', logo: '/dunzo-logo.png', deliveryTime: '20 mins' },
 ];
 
-// Mock product data
-const productsData: Product[] = [
-  {
-    id: '1',
-    name: 'Fresh Milk',
-    description: 'Farm-fresh whole milk, perfect for your daily needs.',
-    category: 'Dairy & Milk',
-    image: '/placeholder.svg',
-    unit: '500ml',
-    prices: [
-      { platform: 'blinkit', price: 30, available: true, deliveryTime: '10 mins' },
-      { platform: 'zepto', price: 28, available: true, deliveryTime: '8 mins' },
-      { platform: 'swiggy', price: 32, available: true, deliveryTime: '15 mins' },
-      { platform: 'bigbasket', price: 29, available: true, deliveryTime: '30 mins' },
-      { platform: 'dunzo', price: 31, available: true, deliveryTime: '20 mins' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Organic Bananas',
-    description: 'Sweet and nutritious organic bananas.',
-    category: 'Fruits',
-    image: '/placeholder.svg',
-    unit: '6 pcs',
-    prices: [
-      { platform: 'blinkit', price: 45, available: true, deliveryTime: '10 mins' },
-      { platform: 'zepto', price: 42, available: true, deliveryTime: '8 mins' },
-      { platform: 'swiggy', price: 48, available: true, deliveryTime: '15 mins' },
-      { platform: 'bigbasket', price: 40, available: true, deliveryTime: '30 mins' },
-      { platform: 'dunzo', price: 46, available: true, deliveryTime: '20 mins' },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Fresh Tomatoes',
-    description: 'Ripe and juicy tomatoes for your salads and cooking.',
-    category: 'Vegetables',
-    image: '/placeholder.svg',
-    unit: '500g',
-    prices: [
-      { platform: 'blinkit', price: 35, available: true, deliveryTime: '10 mins' },
-      { platform: 'zepto', price: 32, available: true, deliveryTime: '8 mins' },
-      { platform: 'swiggy', price: 38, available: true, deliveryTime: '15 mins' },
-      { platform: 'bigbasket', price: 30, available: true, deliveryTime: '30 mins' },
-      { platform: 'dunzo', price: 36, available: false, deliveryTime: '20 mins' },
-    ],
-  },
-  {
-    id: '4',
-    name: 'Chicken Breast',
-    description: 'Premium boneless chicken breast, fresh and ready to cook.',
-    category: 'Meat',
-    image: '/placeholder.svg',
-    unit: '500g',
-    prices: [
-      { platform: 'blinkit', price: 180, available: true, deliveryTime: '10 mins' },
-      { platform: 'zepto', price: 175, available: true, deliveryTime: '8 mins' },
-      { platform: 'swiggy', price: 190, available: true, deliveryTime: '15 mins' },
-      { platform: 'bigbasket', price: 170, available: true, deliveryTime: '30 mins' },
-      { platform: 'dunzo', price: 185, available: true, deliveryTime: '20 mins' },
-    ],
-  },
-  {
-    id: '5',
-    name: 'Whole Wheat Bread',
-    description: 'Nutritious whole wheat bread for a healthy breakfast.',
-    category: 'Grocery',
-    image: '/placeholder.svg',
-    unit: '400g',
-    prices: [
-      { platform: 'blinkit', price: 40, available: true, deliveryTime: '10 mins' },
-      { platform: 'zepto', price: 38, available: true, deliveryTime: '8 mins' },
-      { platform: 'swiggy', price: 42, available: true, deliveryTime: '15 mins' },
-      { platform: 'bigbasket', price: 37, available: true, deliveryTime: '30 mins' },
-      { platform: 'dunzo', price: 41, available: true, deliveryTime: '20 mins' },
-    ],
-  },
-  {
-    id: '6',
-    name: 'Greek Yogurt',
-    description: 'Creamy Greek yogurt, high in protein and perfect for breakfast.',
-    category: 'Dairy & Milk',
-    image: '/placeholder.svg',
-    unit: '200g',
-    prices: [
-      { platform: 'blinkit', price: 60, available: true, deliveryTime: '10 mins' },
-      { platform: 'zepto', price: 58, available: true, deliveryTime: '8 mins' },
-      { platform: 'swiggy', price: 65, available: false, deliveryTime: '15 mins' },
-      { platform: 'bigbasket', price: 55, available: true, deliveryTime: '30 mins' },
-      { platform: 'dunzo', price: 62, available: true, deliveryTime: '20 mins' },
-    ],
-  },
-  {
-    id: '7',
-    name: 'Potato Chips',
-    description: 'Crunchy potato chips for your snack cravings.',
-    category: 'Snacks',
-    image: '/placeholder.svg',
-    unit: '100g',
-    prices: [
-      { platform: 'blinkit', price: 30, available: true, deliveryTime: '10 mins' },
-      { platform: 'zepto', price: 28, available: true, deliveryTime: '8 mins' },
-      { platform: 'swiggy', price: 32, available: true, deliveryTime: '15 mins' },
-      { platform: 'bigbasket', price: 27, available: true, deliveryTime: '30 mins' },
-      { platform: 'dunzo', price: 31, available: true, deliveryTime: '20 mins' },
-    ],
-  },
-  {
-    id: '8',
-    name: 'Cola Soft Drink',
-    description: 'Refreshing cola drink for instant energy.',
-    category: 'Beverages',
-    image: '/placeholder.svg',
-    unit: '1L',
-    prices: [
-      { platform: 'blinkit', price: 65, available: true, deliveryTime: '10 mins' },
-      { platform: 'zepto', price: 62, available: true, deliveryTime: '8 mins' },
-      { platform: 'swiggy', price: 68, available: true, deliveryTime: '15 mins' },
-      { platform: 'bigbasket', price: 60, available: true, deliveryTime: '30 mins' },
-      { platform: 'dunzo', price: 66, available: true, deliveryTime: '20 mins' },
-    ],
-  },
-];
+// Use the expanded product list
+const productsData: Product[] = expandedProducts;
 
-// Extract unique categories
+// Extract unique categories from the expanded product list
 const categoriesData = ['All', ...new Set(productsData.map(product => product.category))];
+
+// Create the context
+const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
 // Provider component
 export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -365,6 +245,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSearchQuery,
     setSelectedPlatform,
     setSelectedCategory,
+    setFilteredProducts,
     addToCart,
     removeFromCart,
     updateCartItemQuantity,

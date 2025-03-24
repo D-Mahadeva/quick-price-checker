@@ -1,3 +1,4 @@
+// Updated CartPage.tsx
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -5,8 +6,9 @@ import { useShop, Platform, CartItem as CartItemType } from '@/context/ShopConte
 import Header from '@/components/Header';
 import CartItem from '@/components/CartItem';
 import PriceComparison from '@/components/PriceComparison';
-import { ArrowLeft, ShoppingCart, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
 const CartPage = () => {
@@ -36,11 +38,40 @@ const CartPage = () => {
     return grouped;
   }, [cart]);
   
+  // Check if all items are available on selected platform
+  const allItemsAvailableForCheckout = React.useMemo(() => {
+    if (!checkoutPlatform) return false;
+    
+    return cart.every(item => {
+      const priceInfo = item.product.prices.find(p => p.platform === checkoutPlatform);
+      return priceInfo && priceInfo.available;
+    });
+  }, [cart, checkoutPlatform]);
+  
+  // Get unavailable items for selected platform
+  const unavailableItems = React.useMemo(() => {
+    if (!checkoutPlatform) return [];
+    
+    return cart.filter(item => {
+      const priceInfo = item.product.prices.find(p => p.platform === checkoutPlatform);
+      return !priceInfo || !priceInfo.available;
+    });
+  }, [cart, checkoutPlatform]);
+  
   const handleCheckout = () => {
     if (!checkoutPlatform) {
       toast({
         title: "Please select a platform",
         description: "Select a platform to proceed with checkout",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!allItemsAvailableForCheckout) {
+      toast({
+        title: "Some items are unavailable",
+        description: "Please remove unavailable items or select a different platform",
         variant: "destructive",
       });
       return;
@@ -101,6 +132,18 @@ const CartPage = () => {
                 </h3>
               </div>
               
+              {/* Unavailable items warning */}
+              {checkoutPlatform && unavailableItems.length > 0 && (
+                <Alert variant="destructive" className="m-4 border-destructive/30 bg-destructive/10">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle className="text-destructive">Unavailable Items</AlertTitle>
+                  <AlertDescription className="text-destructive/90">
+                    Some items in your cart are not available on {platforms.find(p => p.id === checkoutPlatform)?.name}. 
+                    These items will be highlighted below.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               {/* Platform sections */}
               {Object.entries(groupedCartItems).map(([platform, items]) => {
                 // Skip platforms with no items
@@ -138,7 +181,7 @@ const CartPage = () => {
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total</span>
                   <span className="font-bold text-lg">
-                    ₹{checkoutPlatform ? getCartTotal(checkoutPlatform) : getCartTotal()}
+                    ₹{checkoutPlatform && allItemsAvailableForCheckout ? getCartTotal(checkoutPlatform) : getCartTotal()}
                   </span>
                 </div>
               </div>
@@ -163,8 +206,15 @@ const CartPage = () => {
                     <div className="text-sm">
                       <p>You're checking out with:</p>
                       <p className={`font-medium text-base platform-${checkoutPlatform} mt-1`}>
-                        {checkoutPlatform.charAt(0).toUpperCase() + checkoutPlatform.slice(1)}
+                        {platforms.find(p => p.id === checkoutPlatform)?.name}
                       </p>
+                      
+                      {!allItemsAvailableForCheckout && (
+                        <div className="mt-2 text-destructive flex items-center">
+                          <AlertTriangle size={14} className="mr-1.5" />
+                          <span>{unavailableItems.length} items unavailable</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground">
@@ -175,7 +225,7 @@ const CartPage = () => {
                 
                 <Button 
                   className="w-full bg-black hover:bg-black/80 text-white"
-                  disabled={!checkoutPlatform}
+                  disabled={!checkoutPlatform || !allItemsAvailableForCheckout}
                   onClick={handleCheckout}
                 >
                   Proceed to Checkout
